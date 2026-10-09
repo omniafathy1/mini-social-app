@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment variables: they contain secrets (DB password, JWT secret, Cloudinary keys).
+# NEVER commit them. Only the .env.example template (with fake values) is allowed.
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+.vite/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
