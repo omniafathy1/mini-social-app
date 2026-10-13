@@ -33,8 +33,48 @@ export function usePosts() {
   // Like or unlike a post.
   const likeMutation = useMutation({
     mutationFn: toggleLike,
-    onSuccess: () => {
+    onMutate: async ({ postId }) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ['posts'] }),
+        queryClient.cancelQueries({ queryKey: ['userPosts'] }),
+      ]);
+
+      const previousPosts = queryClient.getQueryData(['posts']);
+      const previousUserPosts = queryClient.getQueriesData({ queryKey: ['userPosts'] });
+      const updatePost = (post) => {
+        if (post.id !== postId) return post;
+
+        const isLiked = !post.isLiked;
+        return {
+          ...post,
+          isLiked,
+          likesCount: Math.max(0, (post.likesCount || 0) + (isLiked ? 1 : -1)),
+        };
+      };
+
+      queryClient.setQueryData(['posts'], (old) => old && ({
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          posts: page.posts.map(updatePost),
+        })),
+      }));
+      queryClient.setQueriesData({ queryKey: ['userPosts'] }, (old) =>
+        old && old.map(updatePost)
+      );
+
+      return { previousPosts, previousUserPosts };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+      queryClient.setQueryData(['posts'], context.previousPosts);
+      context.previousUserPosts.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
+      queryClient.invalidateQueries({ queryKey: ['userPosts'] });
     },
   });
 

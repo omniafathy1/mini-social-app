@@ -1,6 +1,3 @@
-
-
-
 // src/features/notifications/hooks/useRealtimeNotifications.js
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';

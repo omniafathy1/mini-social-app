@@ -57,6 +57,7 @@ async function createPost(req, res) {
       imageUrl: post.properties.imageUrl || null,
       createdAt: toIsoString(post.properties.createdAt),
       likesCount: 0,
+      isLiked: false,
       user: {
         id: author.properties.id,
         name: author.properties.name,
@@ -82,38 +83,44 @@ async function createPost(req, res) {
 
 // GET /api/posts?page=1&limit=10
 async function getAllPosts(req, res) {
-  // لو الفرونت مبعتش page أو limit، نستخدم قيم افتراضية معقولة
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const limit = Math.max(parseInt(req.query.limit) || 10, 1);
   const skip = (page - 1) * limit;
+  const currentUserId = req.userId || null;
 
   const session = driver.session();
 
   try {
-    // بنجيب العدد الكلي للبوستات عشان الفرونت يعرف فيه صفحات كام / هل فيه "أكتر" ولا لأ
     const countResult = await session.run(`
       MATCH (:User)-[:CREATED]->(p:Post)
       RETURN count(p) AS total
     `);
     const totalPosts = countResult.records[0].get("total").toNumber();
 
+    // تعديل الـ Query لتكون صحيحة ١٠٠٪ في جراف Neo4j
     const result = await session.run(
       `
       MATCH (u:User)-[:CREATED]->(p:Post)
       OPTIONAL MATCH (liker:User)-[:LIKED]->(p)
-      RETURN p, u, count(liker) AS likeCount
+      WITH p, u, count(liker) AS likeCount
+      OPTIONAL MATCH (currentUser:User {id: $currentUserId})-[myLike:LIKED]->(p)
+      RETURN p, u, likeCount, myLike IS NOT NULL AS isLiked
       ORDER BY p.createdAt DESC
       SKIP $skip
       LIMIT $limit
       `,
-      // neo4j.int(...) عشان الـ driver محتاج الأرقام دي كـ integers مش JS numbers عادية
-      { skip: neo4j.int(skip), limit: neo4j.int(limit) }
+      {
+        skip: neo4j.int(skip),
+        limit: neo4j.int(limit),
+        currentUserId: currentUserId || ""
+      }
     );
 
     const posts = result.records.map((record) => {
       const post = record.get("p");
       const user = record.get("u");
       const likeCount = record.get("likeCount").toNumber();
+      const isLiked = record.get("isLiked");
 
       return {
         id: post.properties.id,
@@ -121,6 +128,8 @@ async function getAllPosts(req, res) {
         imageUrl: post.properties.imageUrl || null,
         createdAt: toIsoString(post.properties.createdAt),
         likesCount: likeCount,
+        isLiked: isLiked,
+
         user: {
           id: user.properties.id,
           name: user.properties.name,
@@ -310,7 +319,7 @@ async function togglePostLike(req, res) {
       `,
       { userId, postId }
     );
-
+    let isLiked = false;
     let message = "";
 
     if (checkResult.records.length > 0) {
@@ -322,6 +331,7 @@ async function togglePostLike(req, res) {
         { userId, postId }
       );
       message = "Like removed successfully";
+      isLiked = false;
     } else {
       const likeResult = await session.run(
         `
@@ -335,6 +345,7 @@ async function togglePostLike(req, res) {
         { userId, postId }
       );
       message = "Post liked successfully";
+      isLiked = true;
 
       // بنبعت إشعار بس لما اللايك "يتحط" (مش لما يتشال)، وده نضع newly-liked branch بس
       if (likeResult.records.length > 0) {
@@ -357,7 +368,7 @@ async function togglePostLike(req, res) {
     // أي حد تاني فاتح الفيد دلوقتي هيشوف العدد ده يتحدث لايف، حتى لو هو مش اللي عمل اللايك
     getIO().emit("post:liked", { postId, likesCount: likeCount });
 
-    res.json({ message, likeCount });
+    res.json({ message, likeCount, isLiked });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to toggle like on post" });

@@ -41,6 +41,12 @@ export function useRealtimePosts() {
 					})),
 				};
 			});
+
+			queryClient.setQueriesData({ queryKey: ['userPosts'] }, (oldPosts) =>
+				oldPosts?.map((post) =>
+					post.id === postId ? { ...post, likesCount } : post
+				)
+			);
 		}
 
 		socket.on('post:created', handlePostCreated);

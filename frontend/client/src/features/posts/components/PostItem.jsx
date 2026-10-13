@@ -163,10 +163,17 @@ export default function PostItem({ post, currentUserId }) {
 
       <div className="grid grid-cols-2 gap-1 px-3 py-2">
         <button
+          type="button"
           onClick={() => toggleLike({ postId: post.id })}
-          className="flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold text-slate-500 transition hover:bg-blue-50 hover:text-blue-600"
+          aria-pressed={Boolean(post.isLiked)}
+          className={`flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition ${
+            post.isLiked
+              ? 'bg-rose-50 text-rose-600 hover:bg-rose-100'
+              : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600'
+          }`}
         >
-          <Heart size={18} /> Like
+          <Heart size={18} fill={post.isLiked ? 'currentColor' : 'none'} />
+          {post.isLiked ? 'Liked' : 'Like'}
         </button>
         <button
           onClick={() => setIsCommentsOpen((isOpen) => !isOpen)}

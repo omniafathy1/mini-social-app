@@ -17,7 +17,7 @@ const {
 
 // Note: Direct user creation is disabled. Users must register via /api/auth/register or Google OAuth.
 router.get("/:id", optionalAuth, getUserById); // optionalAuth: public profile view with personalized isFollowing
-router.get("/:id/posts", getUserPosts);
+router.get("/:id/posts", optionalAuth, getUserPosts);
 router.get("/:id/followers", getFollowers);
 router.get("/:id/following", getFollowing);
 router.post("/:id/follow", requireAuth, toggleFollow);

@@ -107,6 +107,7 @@ async function getUserById(req, res) {
 // GET /api/users/:id/posts  (كل البوستات اللي عملها اليوزر ده - للبروفايل)
 async function getUserPosts(req, res) {
   const { id } = req.params;
+  const currentUserId = req.userId || "";
   const session = driver.session();
 
   try {
@@ -124,21 +125,26 @@ async function getUserPosts(req, res) {
       `
       MATCH (u:User {id: $id})-[:CREATED]->(p:Post)
       OPTIONAL MATCH (liker:User)-[:LIKED]->(p)
-      RETURN p, count(liker) AS likeCount
+      WITH p, count(liker) AS likeCount
+      OPTIONAL MATCH (currentUser:User {id: $currentUserId})-[myLike:LIKED]->(p)
+      RETURN p, likeCount, myLike IS NOT NULL AS isLiked
       ORDER BY p.createdAt DESC
       `,
-      { id }
+      { id, currentUserId }
     );
 
     const posts = result.records.map((record) => {
       const post = record.get("p");
       const likeCount = record.get("likeCount").toNumber();
+      const isLiked = record.get("isLiked");
 
       return {
         id: post.properties.id,
         content: post.properties.content,
+        imageUrl: post.properties.imageUrl || null,
         createdAt: toIsoString(post.properties.createdAt),
-        likesCount: likeCount
+        likesCount: likeCount,
+        isLiked
       };
     });
 
