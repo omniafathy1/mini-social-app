@@ -4,12 +4,11 @@ import { usePosts } from '../hooks/usePosts';
 
 export default function CreatePost() {
 	const [content, setContent] = useState('');
-	const [selectedImage, setSelectedImage] = useState(null); // الملف نفسه (File) اللي هيتبعت للباك
-	const [previewUrl, setPreviewUrl] = useState(null); // رابط مؤقت بس عشان نعرضه في المتصفح
+	const [selectedImage, setSelectedImage] = useState(null);
+	const [previewUrl, setPreviewUrl] = useState(null);
 	const fileInputRef = useRef(null);
 	const { createPost, isCreating } = usePosts();
 
-	// زرار "Add photo" مش بيفتح file picker بنفسه؛ بيدوس على الـ <input type="file"> المخفي بدله
 	const handlePhotoButtonClick = () => {
 		fileInputRef.current?.click();
 	};
@@ -19,13 +18,13 @@ export default function CreatePost() {
 		if (!file) return;
 
 		setSelectedImage(file);
-		setPreviewUrl(URL.createObjectURL(file)); // بيعمل رابط مؤقت من الملف نفسه، من غير ما يترفع لحد دلوقتي
+		setPreviewUrl(URL.createObjectURL(file));
 	};
 
 	const handleRemoveImage = () => {
 		setSelectedImage(null);
 		setPreviewUrl(null);
-		if (fileInputRef.current) fileInputRef.current.value = ''; // عشان لو اخترت نفس الملف تاني يشتغل onChange تاني
+		if (fileInputRef.current) fileInputRef.current.value = '';
 	};
 
 	const resetForm = () => {
@@ -58,7 +57,6 @@ export default function CreatePost() {
 						className="w-full resize-none rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
 					/>
 
-					{/* input الملف نفسه مخفي، الزرار اللي تحت هو اللي بيفتحه */}
 					<input
 						ref={fileInputRef}
 						type="file"

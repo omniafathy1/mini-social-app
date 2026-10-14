@@ -4,8 +4,6 @@ A full-stack social media app built to learn modern web development end to end: 
 
 > **Status:** in active development. Google sign-in is being finalized (see [Google sign-in](#google-sign-in-work-in-progress)).
 
-<!-- Add screenshots to docs/screenshots/ and reference them here, e.g. ![Feed](docs/screenshots/feed.png) -->
-
 ## Features
 
 - **Authentication:** register and login with email + password (hashed with bcrypt), JWT access tokens, input validation with zod

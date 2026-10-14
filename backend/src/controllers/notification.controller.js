@@ -47,7 +47,7 @@ async function getMyNotifications(req, res) {
   }
 }
 
-// GET /api/notifications/unread-count  (للرقم الأحمر اللي على الجرس)
+// GET /api/notifications/unread-count
 async function getUnreadCount(req, res) {
   const userId = req.userId;
   const session = driver.session();
@@ -101,7 +101,7 @@ async function markAsRead(req, res) {
   const session = driver.session();
 
   try {
-    // المطابقة بتمر عن طريق (:User {id: $userId}) عشان نتأكد إن الإشعار ده بتاعك انت فعلاً (ownership check)
+    // Match the notification owner to the authenticated user.
     const result = await session.run(
       `
       MATCH (:User {id: $userId})-[:HAS_NOTIFICATION]->(n:Notification {id: $id})

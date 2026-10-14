@@ -14,14 +14,13 @@ export default function ProfilePage({ userId }) {
   const currentUserId = useAuthStore((state) => state.currentUser?.id);
   const updateCurrentUser = useAuthStore((state) => state.updateCurrentUser);
   const fileInputRef = useRef(null);
-  const [listModal, setListModal] = useState(null); // null | 'followers' | 'following'
+  const [listModal, setListModal] = useState(null);
 
   const isOwnProfile = userId === currentUserId;
 
   const followMutation = useMutation({
     mutationFn: () => toggleFollow(userId),
     onSuccess: () => {
-      // بعد الـ follow/unfollow، نجيب بيانات اليوزر تاني عشان followersCount و isFollowing يتحدثوا
       queryClient.invalidateQueries({ queryKey: ['user', userId] });
     },
   });
@@ -29,11 +28,10 @@ export default function ProfilePage({ userId }) {
   const avatarMutation = useMutation({
     mutationFn: uploadAvatar,
     onSuccess: (updatedUser) => {
-      // نحدّث الكاش بتاع react-query عشان الصفحة تتحدث فورًا
       queryClient.invalidateQueries({ queryKey: ['user', userId] });
 
-      // ولو ده البروفايل بتاعنا احنا، نحدّث الـ authStore كمان عشان الـ Navbar وأي مكان تاني يشوف الصورة الجديدة على طول
       if (isOwnProfile) {
+        // Keep the authenticated user's avatar in sync with the rest of the app.
         updateCurrentUser({ avatarUrl: updatedUser.avatarUrl });
       }
     },
@@ -48,7 +46,7 @@ export default function ProfilePage({ userId }) {
     if (!file) return;
 
     avatarMutation.mutate({ userId, image: file });
-    event.target.value = ''; // عشان تقدر تختار نفس الصورة تاني لو عايز
+    event.target.value = '';
   };
 
   if (isLoading) {
@@ -76,7 +74,6 @@ export default function ProfilePage({ userId }) {
             )}
           </button>
 
-          {/* أيقونة الكاميرا دي بتظهر بس لو ده بروفايلك انت، تلميح إنك تقدر تدوس تغيّر الصورة */}
           {isOwnProfile && (
             <button
               type="button"

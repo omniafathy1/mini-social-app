@@ -9,21 +9,20 @@ const { createNotification } = require("../utils/createNotification");
 // POST /api/posts
 async function createPost(req, res) {
   const { content } = req.body;
-  const userId = req.userId; // جاي من الـ requireAuth middleware، مش من كلام الفرونت
+  const userId = req.userId; // Use the authenticated user ID, never a client-supplied value.
   const id = crypto.randomUUID();
 
   const session = driver.session();
 
   try {
-    // zod بيتحقق من شكل "content" بس (لأنه مش عارف بوجود الصورة، دي جايه من multer مش من الـ JSON body)
-    // فبنعمل الفحص ده يدويًا هنا: لازم يبقى فيه نص أو صورة على الأقل
+    // Validate image uploads separately; Zod only validates the JSON body.
+    // Require either text or an image.
     if (!content && !req.file) {
       return res.status(400).json({ message: "Post must have content or an image" });
     }
 
     let imageUrl = null;
 
-    // req.file بيبقى موجود بس لو الفرونت بعت صورة (upload.middleware هو اللي حاطه)
     if (req.file) {
       imageUrl = await uploadImageBuffer(req.file.buffer, req.file.mimetype);
     }
@@ -50,7 +49,6 @@ async function createPost(req, res) {
     const post = result.records[0].get("p");
     const author = result.records[0].get("u");
 
-    // نفس شكل البوست بالظبط اللي الفرونت متعود عليه من getAllPosts، عشان يقدر يحطه في الفيد من غير أي تحويل
     const postPayload = {
       id: post.properties.id,
       content: post.properties.content,
@@ -66,7 +64,7 @@ async function createPost(req, res) {
       }
     };
 
-    // بنبعت الحدث ده لكل الأجهزة المتصلة دلوقتي، حتى قبل ما نرد على الشخص اللي عمل البوست نفسه
+    // Broadcast new posts to connected clients before responding to the creator.
     getIO().emit("post:created", postPayload);
 
     res.status(201).json({
@@ -97,7 +95,6 @@ async function getAllPosts(req, res) {
     `);
     const totalPosts = countResult.records[0].get("total").toNumber();
 
-    // تعديل الـ Query لتكون صحيحة ١٠٠٪ في جراف Neo4j
     const result = await session.run(
       `
       MATCH (u:User)-[:CREATED]->(p:Post)
@@ -207,7 +204,6 @@ async function updatePost(req, res) {
   const session = driver.session();
 
   try {
-    // الأول بنتأكد إن البوست موجود أصلاً، ومين صاحبه
     const ownerCheck = await session.run(
       `
       MATCH (p:Post {id: $id})
@@ -223,8 +219,7 @@ async function updatePost(req, res) {
 
     const owner = ownerCheck.records[0].get("owner");
 
-    // Authentication (فوق في requireAuth) بتتأكد إنك مسجل دخول
-    // ده هنا Authorization: بيتأكد إن اللي بيعدل هو نفسه صاحب البوست
+    // Authorization: only the post owner may edit it.
     if (!owner || owner.properties.id !== userId) {
       return res.status(403).json({ message: "You can only edit your own posts" });
     }
@@ -257,7 +252,7 @@ async function updatePost(req, res) {
   }
 }
 
-// DELETE /api/posts/:id (بيمسح الكومنتات المرتبطة كمان عشان ننضف الجراف)
+// DELETE /api/posts/:id
 async function deletePost(req, res) {
   const { id } = req.params;
   const userId = req.userId;
@@ -304,10 +299,10 @@ async function deletePost(req, res) {
   }
 }
 
-// POST /api/posts/:postId/like  (Toggle: لو اللايك موجود يتشال، لو مش موجود يتحط)
+// POST /api/posts/:postId/like
 async function togglePostLike(req, res) {
   const { postId } = req.params;
-  const userId = req.userId; // من التوكن
+  const userId = req.userId;
 
   const session = driver.session();
 
@@ -347,10 +342,10 @@ async function togglePostLike(req, res) {
       message = "Post liked successfully";
       isLiked = true;
 
-      // بنبعت إشعار بس لما اللايك "يتحط" (مش لما يتشال)، وده نضع newly-liked branch بس
+      // Notify the post owner only when a like is added.
       if (likeResult.records.length > 0) {
         const ownerId = likeResult.records[0].get("ownerId");
-        // منستناش الدالة دي (no await) عشان ما نأخرش الرد على اليوزر اللي بيعمل اللايك
+        // Do not delay the like response while creating the notification.
         createNotification({ recipientId: ownerId, actorId: userId, type: "like", postId });
       }
     }
@@ -365,7 +360,7 @@ async function togglePostLike(req, res) {
 
     const likeCount = countResult.records[0].get("likeCount").toNumber();
 
-    // أي حد تاني فاتح الفيد دلوقتي هيشوف العدد ده يتحدث لايف، حتى لو هو مش اللي عمل اللايك
+    // Broadcast the updated like count to all connected clients.
     getIO().emit("post:liked", { postId, likesCount: likeCount });
 
     res.json({ message, likeCount, isLiked });

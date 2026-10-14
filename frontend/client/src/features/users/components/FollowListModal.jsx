@@ -5,7 +5,6 @@ import { getFollowers, getFollowing } from '../api/usersApi';
 import { useNavigationStore } from '../../../store/navigationStore';
 
 export default function FollowListModal({ userId, type, onClose }) {
-  // type بيكون 'followers' أو 'following'؛ بنستخدمه كجزء من الـ queryKey عشان كل قايمة تتخزن لوحدها في الكاش
   const { data: users = [], isLoading } = useQuery({
     queryKey: [type, userId],
     queryFn: () => (type === 'followers' ? getFollowers(userId) : getFollowing(userId)),
@@ -16,14 +15,14 @@ export default function FollowListModal({ userId, type, onClose }) {
 
   const handleUserClick = (userId) => {
     viewProfile(userId);
-    onClose(); // نقفل المودال عشان البروفايل الجديد يبان من غيرها فوقه
+    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
         className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl"
-        onClick={(event) => event.stopPropagation()} // عشان دوسة جوه المودال متقفلوش
+        onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h3 className="font-bold text-slate-900">{title}</h3>

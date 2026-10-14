@@ -13,7 +13,7 @@ export default function CommentItem({ comment }) {
     e.preventDefault();
     if (!replyContent.trim()) return;
 
-    // مبقناش محتاجين نبعت userId؛ الباك بياخده من التوكن
+    // The API derives the user ID from the authenticated token.
     addReply(
       { commentId: comment.id, content: replyContent },
       {
@@ -88,7 +88,6 @@ export default function CommentItem({ comment }) {
         </form>
       )}
 
-      {/* الردود بتتعرض هنا، متزنرة شوية جنب عشان تبان إنها "تحت" الكومنت الأصلي */}
       {comment.replies?.length > 0 && (
         <div className="mt-3 space-y-2 border-l-2 border-slate-100 pl-3">
           {comment.replies.map((reply) => (

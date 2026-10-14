@@ -31,7 +31,7 @@ export const uploadAvatar = async ({ userId, image }) => {
   formData.append('avatar', image);
 
   const { data } = await axiosClient.put(`/users/${userId}/avatar`, formData, {
-    // نسيب المتصفح يحدد الـ Content-Type ويحط الـ boundary الصح بنفسه
+    // Let the browser set the multipart content type and boundary.
     headers: { 'Content-Type': undefined },
   });
   return data.user;

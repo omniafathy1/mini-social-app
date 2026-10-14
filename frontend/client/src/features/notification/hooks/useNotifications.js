@@ -7,7 +7,7 @@ import {
     markAllAsRead as markAllAsReadApi,
 } from '../api/notificationApi';
 
-export function useNotifications(isOpen = true) { // خلّينا الافتراضي true عشان لو تم استدعاؤه جوه الـ Dropdown يشتغل تلقائياً
+export function useNotifications(isOpen = true) {
     const queryClient = useQueryClient();
 
     const listQuery = useQuery({
@@ -32,16 +32,13 @@ export function useNotifications(isOpen = true) { // خلّينا الافترا
     });
 
     return {
-        // بيانات القائمة وحالتها
         notifications: listQuery.data || [],
         isLoading: listQuery.isLoading,
         isError: listQuery.isError,
         error: listQuery.error,
 
-        // بيانات العداد
         unreadCount: unreadQuery.data ?? 0,
 
-        // كائنات الـ Mutation كاملة للتحكم في الأخطاء والـ Pending States
         markAsReadMutation,
         markAllMutation,
     };

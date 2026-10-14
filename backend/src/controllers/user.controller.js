@@ -71,8 +71,7 @@ async function getUserById(req, res) {
     );
     const followingCount = followingResult.records[0].get("count").toNumber();
 
-    // req.userId مش بيبقى موجود إلا لو اليوزر الحالي مسجل دخول (جاي من optionalAuth)
-    // وبنتأكد كمان إنه مش بيبص لبروفايله هو (متابعة نفسك مفهاش معنى)
+    // Only calculate follow state for authenticated users viewing another profile.
     let isFollowing = false;
     if (req.userId && req.userId !== id) {
       const followCheckResult = await session.run(
@@ -104,14 +103,13 @@ async function getUserById(req, res) {
   }
 }
 
-// GET /api/users/:id/posts  (كل البوستات اللي عملها اليوزر ده - للبروفايل)
+// GET /api/users/:id/posts
 async function getUserPosts(req, res) {
   const { id } = req.params;
   const currentUserId = req.userId || "";
   const session = driver.session();
 
   try {
-    // بنتأكد الأول إن اليوزر ده موجود أصلاً
     const userCheck = await session.run(
       `MATCH (u:User {id: $id}) RETURN u`,
       { id }
@@ -157,10 +155,10 @@ async function getUserPosts(req, res) {
   }
 }
 
-// POST /api/users/:id/follow  (Toggle: لو بتتابعه، يتشال؛ لو مش بتتابعه، يتحط)
+// POST /api/users/:id/follow
 async function toggleFollow(req, res) {
-  const { id } = req.params; // اليوزر المستهدف (اللي هنتابعه/نشيل متابعته)
-  const currentUserId = req.userId; // جاي من requireAuth
+  const { id } = req.params;
+  const currentUserId = req.userId;
 
   if (currentUserId === id) {
     return res.status(400).json({ message: "You cannot follow yourself" });
@@ -185,7 +183,6 @@ async function toggleFollow(req, res) {
     let following;
 
     if (checkResult.records.length > 0) {
-      // العلاقة موجودة بالفعل → نشيلها (unfollow)
       await session.run(
         `
         MATCH (:User {id: $currentUserId})-[r:FOLLOWS]->(:User {id: $id})
@@ -195,7 +192,6 @@ async function toggleFollow(req, res) {
       );
       following = false;
     } else {
-      // مفيش علاقة → نعملها (follow)
       await session.run(
         `
         MATCH (a:User {id: $currentUserId})
@@ -206,7 +202,7 @@ async function toggleFollow(req, res) {
       );
       following = true;
 
-      // الإشعار بيتبعت بس لما المتابعة "تتعمل" (مش لما تتشال)
+      // Notify only when a follow is added.
       createNotification({ recipientId: id, actorId: currentUserId, type: "follow" });
     }
 
@@ -225,7 +221,7 @@ async function toggleFollow(req, res) {
   }
 }
 
-// GET /api/users/:id/followers  (مين بيتابع اليوزر ده)
+// GET /api/users/:id/followers
 async function getFollowers(req, res) {
   const { id } = req.params;
   const session = driver.session();
@@ -258,7 +254,7 @@ async function getFollowers(req, res) {
   }
 }
 
-// GET /api/users/:id/following  (اليوزر ده بيتابع مين)
+// GET /api/users/:id/following
 async function getFollowing(req, res) {
   const { id } = req.params;
   const session = driver.session();
@@ -345,7 +341,7 @@ async function updateUser(req, res) {
   const { id } = req.params;
   const { name, email } = req.body;
 
-  // اليوزر يقدر يعدّل بياناته هو بس، مش أي يوزر تاني حتى لو مسجل دخول
+  // Users may only update their own account.
   if (req.userId !== id) {
     return res.status(403).json({ message: "You can only edit your own account" });
   }

@@ -3,6 +3,7 @@ import LoginForm from './features/auth/components/LoginForm';
 import RegisterForm from './features/auth/components/RegisterForm';
 import PostList from './features/posts/components/PostList';
 import ProfilePage from './features/users/components/ProfilePage';
+import { SearchPage } from './features/search/pages/SearchPage';
 import Navbar from './shared/components/Navbar';
 import { useAuthStore } from './features/auth/store/authStore';
 import { useAuth } from './features/auth/hooks/useAuth';
@@ -14,7 +15,7 @@ import { useRealtimeNotifications } from './features/notification/hooks/useRealt
 function App() {
   const currentUser = useAuthStore((state) => state.currentUser);
   const token = useAuthStore((state) => state.token);
-  const { logout } = useAuth(); // Triggers server-side token revocation and clears store
+  const { logout } = useAuth();
 
   const [isRegistering, setIsRegistering] = useState(false);
 
@@ -22,39 +23,7 @@ function App() {
   const profileUserId = useNavigationStore((state) => state.profileUserId);
   const viewFeed = useNavigationStore((state) => state.viewFeed);
   const viewProfile = useNavigationStore((state) => state.viewProfile);
-
-  // Manage real-time WebSocket connection lifecycle
-  useEffect(() => {
-    if (currentUser && token) {
-      socket.auth = { token };
-      socket.connect();
-    } else {
-      socket.disconnect();
-    }
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [currentUser, token]);
-
-  // Synchronize WebSocket authorization when access token is refreshed automatically
-  useEffect(() => {
-    window.__onTokenRefreshed = (newToken) => {
-      if (socket.connected) {
-        socket.emit('authenticate', { token: newToken });
-      } else {
-        socket.auth = { token: newToken };
-        socket.connect();
-      }
-    };
-
-    return () => {
-      delete window.__onTokenRefreshed;
-    };
-  }, []);
-
-  useRealtimePosts();
-  useRealtimeNotifications();
+  const viewSearch = useNavigationStore((state) => state.viewSearch);
 
   if (!currentUser) {
     return (
@@ -83,11 +52,14 @@ function App() {
         currentUser={currentUser}
         onLogout={logout}
         onProfileClick={() => viewProfile(currentUser.id)}
+        onSearchClick={viewSearch}
       />
 
       <main>
         {currentView === 'feed' ? (
           <PostList />
+        ) : currentView === 'search' ? (
+          <SearchPage />
         ) : (
           <>
             <div className="mx-auto max-w-2xl px-4 pt-6 sm:px-6">

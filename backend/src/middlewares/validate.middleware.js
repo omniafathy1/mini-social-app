@@ -1,11 +1,9 @@
-// validate(schema) بترجع middleware جاهز يتحقق من req.body على حسب أي schema نديله
-// الفكرة إننا نعيد استخدام الدالة دي مع أي endpoint، مش نكررها لكل route لوحده
+// Validate request bodies with a Zod schema and return structured field errors.
 function validate(schema) {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
-      // result.error.issues فيها تفاصيل كل حقل غلط وليه
       const errors = result.error.issues.map((issue) => ({
         field: issue.path.join("."),
         message: issue.message,
@@ -17,7 +15,7 @@ function validate(schema) {
       });
     }
 
-    // بنستبدل req.body بالنسخة "النضيفة" اللي zod رجعها (بعد trim مثلاً)
+    // Use parsed data so schema transformations are reflected in the request.
     req.body = result.data;
     next();
   };

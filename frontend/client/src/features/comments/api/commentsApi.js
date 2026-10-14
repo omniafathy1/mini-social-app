@@ -6,7 +6,7 @@ export const getComments = async (postId) => {
 };
 
 // Add a comment to a post.
-// مبقناش محتاجين نبعت userId؛ الباك بياخده من التوكن (Authorization header)
+// The backend derives the user ID from the authorization token.
 export const addComment = async ({ postId, content }) => {
   const { data } = await axiosClient.post(`/posts/${postId}/comments`, { content });
   return data;

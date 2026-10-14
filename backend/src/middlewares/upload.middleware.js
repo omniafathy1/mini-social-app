@@ -1,10 +1,9 @@
 const multer = require("multer");
 
-// بنخزن الملف في الـ RAM مؤقتًا (buffer) مش على الهارد ديسك،
-// لأننا هنبعته على طول لـ Cloudinary وملناش داعي نحتفظ بيه على السيرفر أصلاً
+// Keep uploads in memory for direct Cloudinary upload; no local files are written.
 const storage = multer.memoryStorage();
 
-// بنرفض أي ملف مش صورة (زي .pdf أو .exe) قبل ما نضيع وقت في رفعه
+// Reject non-image uploads before sending them to Cloudinary.
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
@@ -16,7 +15,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 ميجا حد أقصى للصورة
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB maximum.
 });
 
 module.exports = upload;

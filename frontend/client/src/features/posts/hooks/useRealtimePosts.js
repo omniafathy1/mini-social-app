@@ -7,11 +7,10 @@ export function useRealtimePosts() {
 	const queryClient = useQueryClient();
 
 	useEffect(() => {
-		// بوست جديد وصل من أي يوزر تاني → بنضيفه في أول صفحة في الكاش بتاع useInfiniteQuery
-		// من غير ما نعمل refetch للسيرفر تاني؛ بنكتب القيمة يدويًا بـ setQueryData
+		// Insert new posts into the cached infinite feed without refetching.
 		function handlePostCreated(newPost) {
 			queryClient.setQueryData(['posts'], (oldData) => {
-				if (!oldData) return oldData; // الفيد لسه متحملش، معندناش حاجة نضيف عليها
+				if (!oldData) return oldData;
 
 				const [firstPage, ...restPages] = oldData.pages;
 				const updatedFirstPage = {
@@ -26,7 +25,7 @@ export function useRealtimePosts() {
 			});
 		}
 
-		// حد عمل لايك على بوست (ممكن يكون انت أو أي حد تاني) → بنحدّث عدد اللايكات بس لنفس البوست ده
+		// Keep like counts synchronized in feed and profile caches.
 		function handlePostLiked({ postId, likesCount }) {
 			queryClient.setQueryData(['posts'], (oldData) => {
 				if (!oldData) return oldData;
@@ -52,8 +51,7 @@ export function useRealtimePosts() {
 		socket.on('post:created', handlePostCreated);
 		socket.on('post:liked', handlePostLiked);
 
-		// cleanup: لازم نشيل الـ listeners دول لما الـ component يتشال
-		// من غيرها، كل مرة الـ component يترسم تاني، هيتضاف listener جديد فوق القديم (memory leak + أحداث مكررة)
+		// Remove listeners when the hook unmounts to prevent duplicate events.
 		return () => {
 			socket.off('post:created', handlePostCreated);
 			socket.off('post:liked', handlePostLiked);

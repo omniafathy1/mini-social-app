@@ -9,8 +9,7 @@ async function getCommentsOfPost(req, res) {
   const session = driver.session();
 
   try {
-    // الخطوة 1: الكومنتات الأساسية بس (المتعلقة بالبوست مباشرة بعلاقة COMMENT_OF)
-    // الردود مش بتترابط بالبوست، بترتبط بالكومنت الأب بعلاقة REPLY_TO، فمش بتظهر هنا
+    // Top-level comments link directly to the post; replies link to their parent comment.
     const commentsResult = await session.run(
       `
       MATCH (p:Post {id: $postId})
@@ -38,12 +37,12 @@ async function getCommentsOfPost(req, res) {
           content: comment.properties.content,
           createdAt: toIsoString(comment.properties.createdAt),
           user: user ? { id: user.properties.id, name: user.properties.name, avatarUrl: user.properties.avatarUrl || null } : null,
-          replies: [] // هنملاها في الخطوة الجاية
+          replies: []
         };
       })
       .filter(Boolean);
 
-    // الخطوة 2: جيب كل الردود اللي بترد على أي كومنت من الكومنتات دي، مع مين كاتبها ورادة على أنهي كومنت
+    // Fetch replies with their authors and parent comment IDs for grouping.
     const repliesResult = await session.run(
       `
       MATCH (topComment:Comment)-[:COMMENT_OF]->(:Post {id: $postId})
@@ -55,7 +54,7 @@ async function getCommentsOfPost(req, res) {
       { postId }
     );
 
-    // بنعمل "map" بسيط: parentCommentId → array بتاع الردود عليه، عشان نلزقهم بسرعة تحت
+    // Group replies by parent comment so they can be attached to each comment.
     const repliesByParentId = {};
 
     repliesResult.records.forEach((record) => {
@@ -76,7 +75,6 @@ async function getCommentsOfPost(req, res) {
       repliesByParentId[parentCommentId].push(formattedReply);
     });
 
-    // الخطوة 3: نلزق كل كومنت بالردود بتاعته
     comments.forEach((comment) => {
       comment.replies = repliesByParentId[comment.id] || [];
     });
@@ -126,7 +124,7 @@ async function addCommentToPost(req, res) {
     const user = result.records[0].get("u");
     const ownerId = result.records[0].get("ownerId");
 
-    // إشعار لصاحب البوست إن حد علّق على بوسته (createNotification نفسها بتتجاهل لو المعلّق هو صاحب البوست)
+    // The notification helper skips notifications when the post owner comments on their own post.
     createNotification({ recipientId: ownerId, actorId: userId, type: "comment", postId });
 
     res.status(201).json({
@@ -196,7 +194,7 @@ async function addReplyToComment(req, res) {
   }
 }
 
-// PUT /api/comments/:id  (تعديل كومنت أو رد)
+// PUT /api/comments/:id
 async function updateComment(req, res) {
   const { id } = req.params;
   const { content } = req.body;
@@ -250,7 +248,7 @@ async function updateComment(req, res) {
   }
 }
 
-// DELETE /api/comments/:id (مع كل الردود الفرعية المرتبطة بيه)
+// DELETE /api/comments/:id
 async function deleteComment(req, res) {
   const { id } = req.params;
   const userId = req.userId;

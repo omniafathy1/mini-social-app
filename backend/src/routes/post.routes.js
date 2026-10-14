@@ -28,7 +28,7 @@ router.delete("/:id", requireAuth, deletePost);
 
 router.post("/:postId/like", requireAuth, togglePostLike);
 
-// الكومنتات بتتحط جوه راوت البوستات لأنها تابعة له (nested route)
+// Comments are nested under posts because they belong to a post.
 router.get("/:postId/comments", getCommentsOfPost);
 router.post("/:postId/comments", requireAuth, addCommentToPost);
 router.get("/", optionalAuth, getAllPosts);

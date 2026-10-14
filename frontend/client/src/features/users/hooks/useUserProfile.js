@@ -6,7 +6,7 @@ export function useUserProfile(userId) {
   const profileQuery = useQuery({
     queryKey: ['user', userId],
     queryFn: () => getUserProfile(userId),
-    enabled: !!userId, // ما نجيبش حاجة لو مفيش userId أصلاً
+    enabled: !!userId,
   });
 
   const postsQuery = useQuery({

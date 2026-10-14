@@ -1,6 +1,4 @@
-// الملف ده مسؤوليته حاجة واحدة بس: يعمل "driver" واحد للاتصال بالداتابيز (CognoDB / Neo4j)
-// وأي مكان تاني في المشروع محتاج يتكلم مع الداتابيز هياخد الـ driver ده من هنا
-// (بدل ما كل ملف يعمل اتصال جديد لوحده)
+// Reuse one Neo4j driver across the application.
 
 const neo4j = require("neo4j-driver");
 
@@ -20,4 +18,3 @@ const driver = neo4j.driver(
 );
 
 module.exports = driver;
-

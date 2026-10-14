@@ -1,7 +1,6 @@
 const { z } = require("zod");
 
-// وقت الإنشاء، النص اختياري لأنك ممكن تعمل بوست بصورة بس من غير نص خالص
-// (لو بعت نص فعلاً، لازم يكون شكله سليم برضه)
+// Post creation allows image-only posts; provided text is still validated.
 const createPostSchema = z.object({
   content: z
     .string()
@@ -11,7 +10,7 @@ const createPostSchema = z.object({
     .default(""),
 });
 
-// وقت التعديل، مفيش صور، فالنص بقى إجباري
+// Post updates require non-empty text because images cannot be changed here.
 const updatePostSchema = z.object({
   content: z
     .string({ required_error: "Content is required" })

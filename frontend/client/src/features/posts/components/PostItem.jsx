@@ -16,7 +16,7 @@ export default function PostItem({ post, currentUserId }) {
   const { comments, isLoading, isError, addComment } = useComments(post.id, isCommentsOpen);
   const viewProfile = useNavigationStore((state) => state.viewProfile);
 
-  // الأزرار دي تظهر بس لو انت صاحب البوست فعلاً (فحص شكلي في الفرونت، الحماية الحقيقية في الباك أصلاً)
+  // This is a UI check only; the backend enforces post ownership.
   const isOwner = post.user?.id === currentUserId;
 
   const handleAddComment = (e) => {
@@ -54,7 +54,6 @@ export default function PostItem({ post, currentUserId }) {
 
   const handleDelete = () => {
     setIsMenuOpen(false);
-    // بسيطة كبداية؛ ممكن بعدين نستبدلها بـ modal مخصص بدل confirm() الافتراضية بتاعة المتصفح
     const confirmed = window.confirm('Are you sure you want to delete this post?');
     if (confirmed) {
       deletePost(post.id);
@@ -95,7 +94,6 @@ export default function PostItem({ post, currentUserId }) {
 
             {isMenuOpen && (
               <>
-                {/* طبقة شفافة بتغطي الشاشة كلها، أي دوسة برة القائمة بتقفلها */}
                 <div className="fixed inset-0 z-10" onClick={() => setIsMenuOpen(false)} />
                 <div className="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                   <button
