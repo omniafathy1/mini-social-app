@@ -32,7 +32,7 @@ async function getCommentsOfPost(req, res) {
 
         if (!comment) return null;
 
-        return {
+        return { 
           id: comment.properties.id,
           content: comment.properties.content,
           createdAt: toIsoString(comment.properties.createdAt),

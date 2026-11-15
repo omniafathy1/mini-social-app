@@ -5,7 +5,7 @@ export const useSearch = (searchTerm) => {
   return useQuery({
     queryKey: ['search', searchTerm],
     queryFn: () => searchApi(searchTerm),
-    enabled: !!searchTerm && searchTerm.trim().length >= 1,
+    enabled: !!searchTerm && searchTerm.trim().length >= 2,
     staleTime: 1000 * 60 * 5,
   });
 };
