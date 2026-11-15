@@ -237,7 +237,7 @@ async function updateComment(req, res) {
       comment: {
         id: comment.properties.id,
         content: comment.properties.content,
-        createdAt: toIsoString(comment.properties.createdAt)
+        createdAt: comment.properties.createdAt.toISOString()
       }
     });
   } catch (error) {
