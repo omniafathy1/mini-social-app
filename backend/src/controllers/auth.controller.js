@@ -65,7 +65,6 @@ async function register(req, res) {
       user: serializeUser(userNode),
       accessToken,
       token: accessToken, // Backward compatibility alias
-      refreshToken,
     });
   } catch (error) {
     console.error("Register Error:", error);
@@ -125,7 +124,6 @@ async function login(req, res) {
       user: serializeUser(userNode),
       accessToken,
       token: accessToken, // Backward compatibility alias
-      refreshToken,
     });
   } catch (error) {
     console.error("Login Error:", error);
@@ -136,14 +134,16 @@ async function login(req, res) {
 }
 
 // POST /api/auth/google  (and /api/auth/oauth)
-// Supports Google ID tokens, Access tokens, and Dev Mode OAuth during development
+// Accepts Google ID tokens (verified server-side). A dev-only simulation exists,
+// but it is disabled unless ALLOW_DEV_OAUTH=true, and never works in production.
 async function oauthLogin(req, res) {
   let googleUser;
 
-  // 1. Check for Dev Mode simulation (allowed strictly in non-production environments)
+  // 1. Dev Mode simulation: OFF by default. It must be switched on explicitly
+  //    (ALLOW_DEV_OAUTH=true in a local .env) and is always refused in production.
   if (req.body.devMode) {
-    if (process.env.NODE_ENV === "production") {
-      return res.status(403).json({ message: "Dev mode OAuth is forbidden in production" });
+    if (process.env.NODE_ENV === "production" || process.env.ALLOW_DEV_OAUTH !== "true") {
+      return res.status(403).json({ message: "Dev mode OAuth is disabled" });
     }
     const devEmail = (req.body.email || "google_user@gmail.com").toLowerCase();
     googleUser = {
@@ -161,11 +161,7 @@ async function oauthLogin(req, res) {
       });
     }
 
-    const token =
-      req.body.idToken ||
-      req.body.credential ||
-      req.body.token ||
-      req.body.accessToken;
+    const token = req.body.idToken || req.body.credential || req.body.token;
 
     if (!token) {
       return res.status(400).json({ message: "Google ID token or credential is required" });
@@ -231,7 +227,6 @@ async function oauthLogin(req, res) {
         user: serializeUser(userNode),
         accessToken,
         token: accessToken,
-        refreshToken,
       });
     } else {
       // Existing user: Link googleId and sync avatar if not already set
@@ -264,7 +259,6 @@ async function oauthLogin(req, res) {
         user: serializeUser(userNode),
         accessToken,
         token: accessToken,
-        refreshToken,
       });
     }
   } catch (error) {
@@ -278,8 +272,8 @@ async function oauthLogin(req, res) {
 // POST /api/auth/refresh
 // Handles access token renewal with Refresh Token Rotation (RTR) and reuse detection
 async function refresh(req, res) {
-  // Read refresh token from HTTP-only cookie or request body
-  const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+  // Read the refresh token from the HTTP-only cookie only (never from the request body)
+  const incomingRefreshToken = req.cookies?.refreshToken;
 
   if (!incomingRefreshToken) {
     return res.status(401).json({ message: "No refresh token provided" });
@@ -355,7 +349,6 @@ async function refresh(req, res) {
       user: serializeUser(updatedUserNode),
       accessToken: newAccessToken,
       token: newAccessToken,
-      refreshToken: newRefreshToken,
     });
   } catch (error) {
     console.error("Refresh Error:", error);
@@ -368,7 +361,7 @@ async function refresh(req, res) {
 // POST /api/auth/logout
 async function logout(req, res) {
   const session = driver.session();
-  const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+  const incomingRefreshToken = req.cookies?.refreshToken;
   let userId = req.userId; // If requireAuth was called or passed
 
   // If userId not already set from auth header, attempt to decode refresh token

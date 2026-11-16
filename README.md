@@ -72,7 +72,7 @@ frontend/client/src/
 
 - **Neo4j instead of SQL:** the domain is relationships. `(User)-[:CREATED]->(Post)`, `(User)-[:LIKED]->(Post)`, `(User)-[:FOLLOWS]->(User)` and `(Comment)-[:REPLY_TO]->(Comment)` are first-class in the data model, so queries like "who follows whom" need no junction tables or JOINs.
 - **Authentication vs authorization:** a `requireAuth` middleware verifies the access token, and controllers check ownership (you can only edit or delete your own posts, comments and account). The user id always comes from the token, never from the request body.
-- **Sessions with refresh tokens:** a short-lived access token is sent as a Bearer token, and a refresh token is set in an httpOnly cookie. The database stores only a hash of the refresh token. Every refresh issues a new refresh token and invalidates the previous one (rotation), and presenting an old token revokes the session.
+- **Sessions with refresh tokens:** a short-lived access token (15 minutes by default) is sent as a Bearer token, and a refresh token is set in an httpOnly cookie. The database stores only a hash of the refresh token. Every refresh issues a new refresh token and invalidates the previous one (rotation), and presenting an old token revokes the session.
 - **Server state vs client state:** TanStack Query owns data that comes from the API; Zustand only holds app-level client state (who is logged in, which page is open).
 - **Targeted real-time events:** feed updates are broadcast to everyone, while notifications go only to the recipient through a Socket.IO room named after their user id.
 
@@ -103,11 +103,15 @@ Main environment variables (`backend/.env`). The complete list is in `backend/.e
 | `COGNODB_URI` | Neo4j connection URI |
 | `COGNODB_USERNAME` | Neo4j username |
 | `COGNODB_PASSWORD` | Neo4j password |
-| `JWT_SECRET` | Long random string used to sign tokens |
+| `JWT_SECRET` | Long random string used to sign tokens. It is also used to derive the refresh-token secret when `REFRESH_TOKEN_SECRET` is not set |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID. Without it, Google sign-in responds with 503 |
+| `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET` | Optional. Separate signing secrets for access and refresh tokens |
+| `ACCESS_TOKEN_EXPIRY` | Optional. Access token lifetime (default `15m`) |
+| `NODE_ENV` | Set to `production` when deployed. It turns on secure cookies |
+| `ALLOW_DEV_OAUTH` | Local development only. Set it to `true` to allow a simulated Google login. Never set it in production |
 
 ### 2. Frontend
 
@@ -145,7 +149,7 @@ All routes are prefixed with `/api`. Routes marked with a lock require `Authoriz
 
 ## Google sign-in
 
-The login page uses Google Identity Services. The browser gets a Google ID token, and the backend verifies it with Google (`google-auth-library`) before it creates or signs in the user.
+The login page uses Google Identity Services. The browser gets a Google ID token, and the backend verifies it with Google (`google-auth-library`) before it creates or signs in the user. Only Google ID tokens are accepted; access tokens are rejected.
 
 **Setup:** Google Cloud Console, then APIs & Services, Credentials, Create OAuth client ID, Application type "Web application". Put the client ID in `GOOGLE_CLIENT_ID` (backend) and in the frontend `.env`.
 
