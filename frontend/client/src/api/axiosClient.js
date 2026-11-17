@@ -24,6 +24,17 @@ const refreshClient = axios.create({
 let isRefreshing = false;
 let failedQueue = [];
 
+// Endpoints where a 401 means "wrong credentials / invalid Google token",
+// not "your access token expired", so we must never try to refresh for them
+const NO_REFRESH_ROUTES = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/google',
+  '/auth/oauth',
+  '/auth/refresh',
+  '/auth/logout',
+];
+
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -61,11 +72,7 @@ axiosClient.interceptors.response.use(
     const requestUrl = originalRequest.url || '';
 
     // Never attempt to refresh on authentication endpoints (avoids infinite loops and false logouts)
-    const isAuthRoute =
-      requestUrl.includes('/auth/login') ||
-      requestUrl.includes('/auth/register') ||
-      requestUrl.includes('/auth/refresh') ||
-      requestUrl.includes('/auth/logout');
+    const isAuthRoute = NO_REFRESH_ROUTES.some((route) => requestUrl.includes(route));
 
     if (isAuthRoute) {
       return Promise.reject(error);
@@ -83,6 +90,7 @@ axiosClient.interceptors.response.use(
         failedQueue.push({ resolve, reject });
       })
         .then((newToken) => {
+          originalRequest._retry = true; // a queued request also gets only one retry
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return axiosClient(originalRequest);
         })
